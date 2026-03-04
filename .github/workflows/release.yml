@@ -56,43 +56,7 @@ jobs:
         continue-on-error: true
 
       - name: Compile with Nuitka
-        run: |
-          python -m nuitka `
-            --onefile `
-            --assume-yes-for-downloads `
-            --output-dir=dist `
-            --output-filename=NexPlorer `
-            --windows-disable-console `
-            --enable-plugin=tk-inter `
-            --include-package=nexplorer `
-            --include-package=customtkinter `
-            --include-package=PIL `
-            --include-package=cryptography `
-            --include-package=zstandard `
-            --include-package=lz4 `
-            --include-package=brotli `
-            --include-package=py7zr `
-            --include-package=psutil `
-            --include-package=watchdog `
-            --include-package=piexif `
-            --include-package=imagehash `
-            --include-package=yaml `
-            --nofollow-import-to=boto3 `
-            --nofollow-import-to=botocore `
-            --nofollow-import-to=numpy `
-            --nofollow-import-to=pandas `
-            --nofollow-import-to=matplotlib `
-            --nofollow-import-to=IPython `
-            --nofollow-import-to=sklearn `
-            --nofollow-import-to=tensorflow `
-            --nofollow-import-to=torch `
-            --nofollow-import-to=docx `
-            --nofollow-import-to=openpyxl `
-            --nofollow-import-to=pptx `
-            --nofollow-import-to=unittest `
-            --nofollow-import-to=distutils `
-            --nofollow-import-to=setuptools `
-            nexplorer\__main__.py
+        run: python -m nuitka --output-filename=NexPlorer nexplorer/__main__.py
 
       - name: Rename output
         shell: bash
@@ -142,8 +106,7 @@ jobs:
         continue-on-error: true
 
       - name: Compile with Nuitka
-        run: |
-          python -m nuitka             --onefile             --assume-yes-for-downloads             --output-dir=dist             --output-filename=NexPlorer             --enable-plugin=tk-inter             --include-package=nexplorer             --include-package=customtkinter             --include-package=PIL             --include-package=cryptography             --include-package=zstandard             --include-package=lz4             --include-package=brotli             --include-package=py7zr             --include-package=psutil             --include-package=watchdog             --include-package=piexif             --include-package=imagehash             --include-package=yaml             --nofollow-import-to=boto3             --nofollow-import-to=botocore             --nofollow-import-to=numpy             --nofollow-import-to=pandas             --nofollow-import-to=matplotlib             --nofollow-import-to=IPython             --nofollow-import-to=sklearn             --nofollow-import-to=tensorflow             --nofollow-import-to=torch             --nofollow-import-to=docx             --nofollow-import-to=openpyxl             --nofollow-import-to=pptx             --nofollow-import-to=unittest             --nofollow-import-to=distutils             --nofollow-import-to=setuptools             nexplorer/__main__.py
+        run: python -m nuitka --output-filename=NexPlorer nexplorer/__main__.py
 
       - name: Rename output
         run: |
@@ -161,7 +124,7 @@ jobs:
 # MACOS BUILD
 # ─────────────────────────────────────────────────────────────────────────────
   build-macos:
-    runs-on: macos-13
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -192,8 +155,7 @@ jobs:
         continue-on-error: true
 
       - name: Compile with Nuitka
-        run: |
-          python -m nuitka             --onefile             --assume-yes-for-downloads             --output-dir=dist             --output-filename=NexPlorer             --enable-plugin=tk-inter             --include-package=nexplorer             --include-package=customtkinter             --include-package=PIL             --include-package=cryptography             --include-package=zstandard             --include-package=lz4             --include-package=brotli             --include-package=py7zr             --include-package=psutil             --include-package=watchdog             --include-package=piexif             --include-package=imagehash             --include-package=yaml             --nofollow-import-to=boto3             --nofollow-import-to=botocore             --nofollow-import-to=numpy             --nofollow-import-to=pandas             --nofollow-import-to=matplotlib             --nofollow-import-to=IPython             --nofollow-import-to=sklearn             --nofollow-import-to=tensorflow             --nofollow-import-to=torch             --nofollow-import-to=docx             --nofollow-import-to=openpyxl             --nofollow-import-to=pptx             --nofollow-import-to=unittest             --nofollow-import-to=distutils             --nofollow-import-to=setuptools             nexplorer/__main__.py
+        run: python -m nuitka --output-filename=NexPlorer nexplorer/__main__.py
 
       - name: Rename output
         run: |

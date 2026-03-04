@@ -1,0 +1,30 @@
+[tool.nuitka]
+onefile = true
+assume-yes-for-downloads = true
+output-dir = "dist"
+windows-disable-console = true
+enable-plugin = ["tk-inter"]
+
+include-package = [
+    "nexplorer",
+    "customtkinter",
+    "PIL",
+    "cryptography",
+    "zstandard",
+    "lz4",
+    "brotli",
+    "py7zr",
+    "psutil",
+    "watchdog",
+    "piexif",
+    "imagehash",
+    "yaml",
+]
+
+nofollow-import-to = [
+    "boto3", "botocore", "numpy", "pandas",
+    "matplotlib", "IPython", "sklearn",
+    "tensorflow", "torch", "docx",
+    "openpyxl", "pptx", "unittest",
+    "distutils", "setuptools",
+]
