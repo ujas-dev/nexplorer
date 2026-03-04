@@ -1,0 +1,38 @@
+# NexPlorer — CI: runs on every push/PR to main
+# Just validates imports and syntax — does NOT build executables
+# (saves GitHub Actions minutes for the actual release build)
+
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: |
+          pip install --upgrade pip
+          pip install customtkinter Pillow psutil cryptography PyYAML watchdog ruff
+
+      - name: Syntax check with ruff
+        run: ruff check nexplorer/ --ignore E501 --ignore E402
+
+      - name: Import check
+        run: |
+          python -c "from nexplorer.core.constants import CATEGORIES, COMPRESSORS"
+          python -c "from nexplorer.core.hasher    import hash_bytes"
+          python -c "from nexplorer.core.display   import get_os, get_screen_size"
+          python -c "from nexplorer.core.drive     import list_drives"
+          echo "All core imports OK"

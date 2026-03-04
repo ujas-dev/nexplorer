@@ -1,0 +1,248 @@
+# NexPlorer — Automated Cross-Platform Build + Release
+# ─────────────────────────────────────────────────────
+# HOW TO USE:
+#   1. Push your code to GitHub (public repo — 100% free, unlimited minutes)
+#   2. Go to: Releases → "Draft a new release" → create tag v1.0.0 → Publish
+#   3. This workflow triggers automatically
+#   4. ~15-20 min later: Windows .exe + Linux binary + macOS binary appear
+#      in the Release as downloadable files
+#
+# ZERO COST — Public repos have unlimited free GitHub Actions minutes.
+# ─────────────────────────────────────────────────────
+
+name: Build & Release
+
+on:
+  # Trigger 1: When you publish a Release (tag like v1.0.0)
+  release:
+    types: [published]
+
+  # Trigger 2: Manual button in GitHub → Actions tab → "Run workflow"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag (e.g. v1.0.1)"
+        required: false
+        default: "v1.0.0"
+
+permissions:
+  contents: write   # needed to upload files to the release
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────
+  # Job: Build on all 3 platforms in parallel
+  # ────────────────────────────────────────────────────────────────────────────
+  build:
+    strategy:
+      fail-fast: false    # if macOS fails, still finish Windows + Linux
+      matrix:
+        include:
+
+          # ── Windows ─────────────────────────────────────────────────────────
+          - os: windows-latest
+            name: windows-x86_64
+            output_file: build/nexplorer/__main__.exe
+            artifact_name: NexPlorer-windows-x86_64.exe
+            icon: nexplorer/assets/icons/nexplorer.ico
+
+          # ── Linux ───────────────────────────────────────────────────────────
+          - os: ubuntu-22.04
+            name: linux-x86_64
+            output_file: build/nexplorer/__main__.bin
+            artifact_name: NexPlorer-linux-x86_64
+            icon: ""
+
+          # ── macOS ───────────────────────────────────────────────────────────
+          - os: macos-13
+            name: macos-x86_64
+            output_file: build/nexplorer/__main__.bin
+            artifact_name: NexPlorer-macos-x86_64
+            icon: ""
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # ── 1. Get the code ───────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── 2. Python setup ───────────────────────────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip         # caches pip downloads → faster repeat builds
+
+      # ── 3. Linux: system libs for Tkinter + Nuitka C compiler ────────────
+      - name: System dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends             gcc g++ patchelf upx-ucl             python3-dev python3-tk tk-dev             libx11-dev libxft-dev libxext-dev             libfreetype6-dev
+
+      # ── 4. macOS: Tkinter support ─────────────────────────────────────────
+      - name: System dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install python-tk@3.11 || true
+          brew install upx || true
+
+      # ── 5. Windows: UPX ───────────────────────────────────────────────────
+      - name: System dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install upx -y --no-progress || true
+
+      # ── 6. Install Python deps ────────────────────────────────────────────
+      - name: Install Python runtime dependencies
+        run: |
+          pip install --upgrade pip
+          pip install             customtkinter             blake3             zstandard lz4 brotli py7zr             Pillow imagehash piexif             watchdog psutil cryptography             PyYAML schedule
+
+      - name: Install optional dependencies
+        run: |
+          pip install pymupdf  || true
+          pip install mutagen  || true
+
+      # ── 7. Build executable using official Nuitka Action ─────────────────
+      #
+      #   Nuitka/Nuitka-Action@main is the OFFICIAL action from Nuitka devs.
+      #   It handles all platform differences internally.
+      #
+      - name: Build with Nuitka
+        uses: Nuitka/Nuitka-Action@main
+        with:
+          nuitka-version: latest
+
+          # Entry point
+          script-name: nexplorer/__main__.py
+
+          # Single portable file
+          mode: onefile
+
+          # Output folder
+          output-dir: build
+
+          # Enable Tkinter plugin (required for CustomTkinter)
+          enable-plugins: tk-inter
+
+          # Include all nexplorer subpackages
+          include-package: |
+            nexplorer
+            customtkinter
+            PIL
+            cryptography
+            zstandard
+            lz4
+            brotli
+            py7zr
+            psutil
+            watchdog
+            piexif
+            imagehash
+            yaml
+            blake3
+
+          # Include non-Python assets (icons, themes)
+          include-data-dir: |
+            nexplorer/assets=nexplorer/assets
+
+          # Block heavy unused libs from being pulled in
+          nofollow-import-to: |
+            boto3
+            botocore
+            google
+            dropbox
+            numpy
+            pandas
+            scipy
+            matplotlib
+            IPython
+            jupyter
+            sklearn
+            tensorflow
+            torch
+            docx
+            openpyxl
+            pptx
+            unittest
+            doctest
+            pdb
+            pydoc
+            distutils
+            setuptools
+            pkg_resources
+            xmlrpc
+            ftplib
+            imaplib
+            mailbox
+            nntplib
+            poplib
+            telnetlib
+            turtledemo
+
+          # GUI app — no terminal/console window
+          windows-disable-console: true
+
+          # Windows: embed icon + version metadata
+          windows-icon-from-ico: ${{ matrix.icon }}
+          windows-company-name: "NexPlorer"
+          windows-product-name: "NexPlorer"
+          windows-file-version: "1.0.0.0"
+          windows-product-version: "1.0.0.0"
+          windows-file-description: "NexPlorer - Intelligent File Explorer"
+
+          # Enable UPX compression (30-50% smaller binary)
+          enable-plugins: upx
+
+          # Strip debug symbols
+          assume-yes-for-downloads: true
+
+      # ── 8. Rename output to platform-specific name ───────────────────────
+      - name: Rename output binary
+        shell: bash
+        run: |
+          # Nuitka-Action outputs to build/
+          find build/ -maxdepth 2 \( -name "*.exe" -o -name "*.bin" -o -name "__main__" \)             | head -1             | xargs -I{} mv {} build/${{ matrix.artifact_name }}
+          echo "Binary renamed:"
+          ls -lh build/${{ matrix.artifact_name }}
+
+      # ── 9. Upload as workflow artifact (always available, release or not) ─
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: build/${{ matrix.artifact_name }}
+          retention-days: 30
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Job: Attach all 3 binaries to the GitHub Release
+  # Runs AFTER all 3 build jobs succeed
+  # ────────────────────────────────────────────────────────────────────────────
+  attach-to-release:
+    needs: build
+    runs-on: ubuntu-latest
+    # Only run this job when triggered by a Release publish
+    if: github.event_name == 'release'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Download all 3 built binaries
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: List downloaded files
+        run: find artifacts/ -type f -ls
+
+      # Attach them to the release that triggered this workflow
+      - name: Upload binaries to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/NexPlorer-windows-x86_64.exe/NexPlorer-windows-x86_64.exe
+            artifacts/NexPlorer-linux-x86_64/NexPlorer-linux-x86_64
+            artifacts/NexPlorer-macos-x86_64/NexPlorer-macos-x86_64
+          fail_on_unmatched_files: false
