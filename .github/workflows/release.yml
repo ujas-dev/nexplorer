@@ -15,7 +15,7 @@ name: Build & Release
 on:
   # Trigger 1: When you publish a Release (tag like v1.0.0)
   release:
-    types: [published]
+    types: [published, edited]
 
   # Trigger 2: Manual button in GitHub → Actions tab → "Run workflow"
   workflow_dispatch:
