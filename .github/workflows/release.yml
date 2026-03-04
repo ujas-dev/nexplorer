@@ -1,19 +1,14 @@
 # NexPlorer — Automated Cross-Platform Build + Release
 # =====================================================
-# FIXED: All known Nuitka-Action parameter issues
-# - Correct enable-plugins format (comma-separated, not multiline)
-# - Correct include-package format  
-# - Correct nofollow-import-to format
-# - Icon only on Windows (file must exist)
-# - Output path handling fixed
-# - onefile mode correct syntax
+# APPROACH: pip install nuitka (stable PyPI) + run directly
+# WHY: Nuitka-Action@main tries "git checkout latest" which FAILS
+#      because there is no branch named "latest" in Nuitka's repo.
+#      Direct pip install from PyPI always works.
 #
-# HOW TO USE:
-#   Go to GitHub repo → Releases → "Draft a new release"
-#   → Create tag v1.0.0 → Publish Release
-#   → This workflow triggers → ~20 min → executables appear in Release
-#
-# FREE: Public repos have unlimited GitHub Actions minutes
+# USAGE:
+#   GitHub → Releases → "Draft a new release" → tag v1.0.0 → Publish
+#   ~20 min → 3 portable executables appear in the Release assets.
+#   100% free on public repos.
 
 name: Build & Release
 
@@ -25,10 +20,10 @@ on:
 permissions:
   contents: write
 
+# ─────────────────────────────────────────────────────────────────────────────
+# WINDOWS BUILD
+# ─────────────────────────────────────────────────────────────────────────────
 jobs:
-  # ─────────────────────────────────────────────────────────────────────────
-  # BUILD WINDOWS
-  # ─────────────────────────────────────────────────────────────────────────
   build-windows:
     runs-on: windows-latest
     steps:
@@ -45,55 +40,75 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install --upgrade pip
-          pip install customtkinter
-          pip install blake3 || pip install hashlib
-          pip install zstandard lz4 brotli py7zr
-          pip install Pillow imagehash piexif
-          pip install watchdog psutil cryptography
-          pip install PyYAML schedule
+          python -m pip install --upgrade pip
+          python -m pip install nuitka ordered-set
+          python -m pip install customtkinter
+          python -m pip install zstandard lz4 brotli py7zr
+          python -m pip install Pillow imagehash piexif
+          python -m pip install watchdog psutil cryptography
+          python -m pip install PyYAML schedule
 
       - name: Install optional dependencies
         run: |
-          pip install pymupdf || echo "pymupdf skipped"
-          pip install mutagen || echo "mutagen skipped"
+          python -m pip install pymupdf || echo "pymupdf skipped"
+          python -m pip install mutagen || echo "mutagen skipped"
+          python -m pip install blake3  || echo "blake3 skipped"
         continue-on-error: true
 
-      - name: Build with Nuitka
-        uses: Nuitka/Nuitka-Action@main
-        with:
-          nuitka-version: latest
-          script-name: nexplorer/__main__.py
-          mode: onefile
-          output-dir: dist
-          output-filename: NexPlorer
-          windows-disable-console: true
-          enable-plugins: tk-inter,upx
-          include-package: nexplorer,customtkinter,PIL,cryptography,zstandard,lz4,brotli,py7zr,psutil,watchdog,piexif,imagehash,yaml
-          include-data-dir: nexplorer/assets=nexplorer/assets
-          nofollow-import-to: boto3,botocore,google,dropbox,numpy,pandas,scipy,matplotlib,IPython,jupyter,sklearn,tensorflow,torch,docx,openpyxl,pptx,unittest,doctest,pdb,pydoc,distutils,setuptools,pkg_resources
+      - name: Compile with Nuitka
+        run: |
+          python -m nuitka `
+            --onefile `
+            --assume-yes-for-downloads `
+            --output-dir=dist `
+            --output-filename=NexPlorer `
+            --windows-disable-console `
+            --enable-plugin=tk-inter `
+            --include-package=nexplorer `
+            --include-package=customtkinter `
+            --include-package=PIL `
+            --include-package=cryptography `
+            --include-package=zstandard `
+            --include-package=lz4 `
+            --include-package=brotli `
+            --include-package=py7zr `
+            --include-package=psutil `
+            --include-package=watchdog `
+            --include-package=piexif `
+            --include-package=imagehash `
+            --include-package=yaml `
+            --nofollow-import-to=boto3 `
+            --nofollow-import-to=botocore `
+            --nofollow-import-to=numpy `
+            --nofollow-import-to=pandas `
+            --nofollow-import-to=matplotlib `
+            --nofollow-import-to=IPython `
+            --nofollow-import-to=sklearn `
+            --nofollow-import-to=tensorflow `
+            --nofollow-import-to=torch `
+            --nofollow-import-to=docx `
+            --nofollow-import-to=openpyxl `
+            --nofollow-import-to=pptx `
+            --nofollow-import-to=unittest `
+            --nofollow-import-to=distutils `
+            --nofollow-import-to=setuptools `
+            nexplorer\__main__.py
 
-      - name: Locate and rename output
+      - name: Rename output
         shell: bash
         run: |
-          echo "Contents of dist/:"
-          find dist/ -type f || echo "dist/ empty or missing"
-          # Nuitka-Action output can be .exe or inside a subfolder
-          EXE=$(find dist/ -name "*.exe" | head -1)
-          if [ -z "$EXE" ]; then
-            EXE=$(find . -name "NexPlorer.exe" | head -1)
-          fi
-          echo "Found: $EXE"
-          cp "$EXE" NexPlorer-windows-x86_64.exe
+          ls -la dist/
+          cp dist/NexPlorer.exe NexPlorer-windows-x86_64.exe ||           cp "$(find dist/ -name '*.exe' | head -1)" NexPlorer-windows-x86_64.exe
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: NexPlorer-windows-x86_64
           path: NexPlorer-windows-x86_64.exe
 
-  # ─────────────────────────────────────────────────────────────────────────
-  # BUILD LINUX
-  # ─────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# LINUX BUILD
+# ─────────────────────────────────────────────────────────────────────────────
   build-linux:
     runs-on: ubuntu-22.04
     steps:
@@ -111,53 +126,40 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install --upgrade pip
-          pip install customtkinter
-          pip install zstandard lz4 brotli py7zr
-          pip install Pillow imagehash piexif
-          pip install watchdog psutil cryptography
-          pip install PyYAML schedule
+          python -m pip install --upgrade pip
+          python -m pip install nuitka ordered-set
+          python -m pip install customtkinter
+          python -m pip install zstandard lz4 brotli py7zr
+          python -m pip install Pillow imagehash piexif
+          python -m pip install watchdog psutil cryptography
+          python -m pip install PyYAML schedule
 
       - name: Install optional dependencies
         run: |
-          pip install pymupdf || echo "pymupdf skipped"
-          pip install mutagen || echo "mutagen skipped"
-          pip install blake3  || echo "blake3 skipped"
+          python -m pip install pymupdf || echo "pymupdf skipped"
+          python -m pip install mutagen || echo "mutagen skipped"
+          python -m pip install blake3  || echo "blake3 skipped"
         continue-on-error: true
 
-      - name: Build with Nuitka
-        uses: Nuitka/Nuitka-Action@main
-        with:
-          nuitka-version: latest
-          script-name: nexplorer/__main__.py
-          mode: onefile
-          output-dir: dist
-          output-filename: NexPlorer
-          enable-plugins: tk-inter,upx
-          include-package: nexplorer,customtkinter,PIL,cryptography,zstandard,lz4,brotli,py7zr,psutil,watchdog,piexif,imagehash,yaml
-          include-data-dir: nexplorer/assets=nexplorer/assets
-          nofollow-import-to: boto3,botocore,google,dropbox,numpy,pandas,scipy,matplotlib,IPython,jupyter,sklearn,tensorflow,torch,docx,openpyxl,pptx,unittest,doctest,pdb,pydoc,distutils,setuptools,pkg_resources
-
-      - name: Locate and rename output
+      - name: Compile with Nuitka
         run: |
-          echo "Contents of dist/:"
-          find dist/ -type f || echo "dist/ empty"
-          BIN=$(find dist/ -type f -not -name "*.py" | head -1)
-          if [ -z "$BIN" ]; then
-            BIN=$(find . -name "NexPlorer.bin" -o -name "NexPlorer" | grep -v ".py" | head -1)
-          fi
-          echo "Found: $BIN"
-          cp "$BIN" NexPlorer-linux-x86_64
+          python -m nuitka             --onefile             --assume-yes-for-downloads             --output-dir=dist             --output-filename=NexPlorer             --enable-plugin=tk-inter             --include-package=nexplorer             --include-package=customtkinter             --include-package=PIL             --include-package=cryptography             --include-package=zstandard             --include-package=lz4             --include-package=brotli             --include-package=py7zr             --include-package=psutil             --include-package=watchdog             --include-package=piexif             --include-package=imagehash             --include-package=yaml             --nofollow-import-to=boto3             --nofollow-import-to=botocore             --nofollow-import-to=numpy             --nofollow-import-to=pandas             --nofollow-import-to=matplotlib             --nofollow-import-to=IPython             --nofollow-import-to=sklearn             --nofollow-import-to=tensorflow             --nofollow-import-to=torch             --nofollow-import-to=docx             --nofollow-import-to=openpyxl             --nofollow-import-to=pptx             --nofollow-import-to=unittest             --nofollow-import-to=distutils             --nofollow-import-to=setuptools             nexplorer/__main__.py
+
+      - name: Rename output
+        run: |
+          ls -la dist/
+          cp dist/NexPlorer NexPlorer-linux-x86_64 ||           cp "$(find dist/ -type f ! -name '*.py' | head -1)" NexPlorer-linux-x86_64
           chmod +x NexPlorer-linux-x86_64
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: NexPlorer-linux-x86_64
           path: NexPlorer-linux-x86_64
 
-  # ─────────────────────────────────────────────────────────────────────────
-  # BUILD MACOS
-  # ─────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# MACOS BUILD
+# ─────────────────────────────────────────────────────────────────────────────
   build-macos:
     runs-on: macos-13
     steps:
@@ -171,58 +173,43 @@ jobs:
       - name: Install system dependencies
         run: |
           brew install upx || true
-          # Ensure tkinter available for this Python
-          brew install python-tk@3.11 || true
 
       - name: Install Python dependencies
         run: |
-          pip install --upgrade pip
-          pip install customtkinter
-          pip install zstandard lz4 brotli py7zr
-          pip install Pillow imagehash piexif
-          pip install watchdog psutil cryptography
-          pip install PyYAML schedule
+          python -m pip install --upgrade pip
+          python -m pip install nuitka ordered-set
+          python -m pip install customtkinter
+          python -m pip install zstandard lz4 brotli py7zr
+          python -m pip install Pillow imagehash piexif
+          python -m pip install watchdog psutil cryptography
+          python -m pip install PyYAML schedule
 
       - name: Install optional dependencies
         run: |
-          pip install pymupdf || echo "pymupdf skipped"
-          pip install mutagen || echo "mutagen skipped"
-          pip install blake3  || echo "blake3 skipped"
+          python -m pip install pymupdf || echo "pymupdf skipped"
+          python -m pip install mutagen || echo "mutagen skipped"
+          python -m pip install blake3  || echo "blake3 skipped"
         continue-on-error: true
 
-      - name: Build with Nuitka
-        uses: Nuitka/Nuitka-Action@main
-        with:
-          nuitka-version: latest
-          script-name: nexplorer/__main__.py
-          mode: onefile
-          output-dir: dist
-          output-filename: NexPlorer
-          enable-plugins: tk-inter,upx
-          include-package: nexplorer,customtkinter,PIL,cryptography,zstandard,lz4,brotli,py7zr,psutil,watchdog,piexif,imagehash,yaml
-          include-data-dir: nexplorer/assets=nexplorer/assets
-          nofollow-import-to: boto3,botocore,google,dropbox,numpy,pandas,scipy,matplotlib,IPython,jupyter,sklearn,tensorflow,torch,docx,openpyxl,pptx,unittest,doctest,pdb,pydoc,distutils,setuptools,pkg_resources
-
-      - name: Locate and rename output
+      - name: Compile with Nuitka
         run: |
-          echo "Contents of dist/:"
-          find dist/ -type f || echo "dist/ empty"
-          BIN=$(find dist/ -type f -not -name "*.py" | head -1)
-          if [ -z "$BIN" ]; then
-            BIN=$(find . -name "NexPlorer.bin" -o -name "NexPlorer" | grep -v ".py" | head -1)
-          fi
-          echo "Found: $BIN"
-          cp "$BIN" NexPlorer-macos-x86_64
+          python -m nuitka             --onefile             --assume-yes-for-downloads             --output-dir=dist             --output-filename=NexPlorer             --enable-plugin=tk-inter             --include-package=nexplorer             --include-package=customtkinter             --include-package=PIL             --include-package=cryptography             --include-package=zstandard             --include-package=lz4             --include-package=brotli             --include-package=py7zr             --include-package=psutil             --include-package=watchdog             --include-package=piexif             --include-package=imagehash             --include-package=yaml             --nofollow-import-to=boto3             --nofollow-import-to=botocore             --nofollow-import-to=numpy             --nofollow-import-to=pandas             --nofollow-import-to=matplotlib             --nofollow-import-to=IPython             --nofollow-import-to=sklearn             --nofollow-import-to=tensorflow             --nofollow-import-to=torch             --nofollow-import-to=docx             --nofollow-import-to=openpyxl             --nofollow-import-to=pptx             --nofollow-import-to=unittest             --nofollow-import-to=distutils             --nofollow-import-to=setuptools             nexplorer/__main__.py
+
+      - name: Rename output
+        run: |
+          ls -la dist/
+          cp dist/NexPlorer NexPlorer-macos-x86_64 ||           cp "$(find dist/ -type f ! -name '*.py' | head -1)" NexPlorer-macos-x86_64
           chmod +x NexPlorer-macos-x86_64
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: NexPlorer-macos-x86_64
           path: NexPlorer-macos-x86_64
 
-  # ─────────────────────────────────────────────────────────────────────────
-  # ATTACH ALL 3 BINARIES TO GITHUB RELEASE
-  # ─────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# ATTACH ALL 3 TO GITHUB RELEASE
+# ─────────────────────────────────────────────────────────────────────────────
   attach-to-release:
     needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
@@ -235,10 +222,10 @@ jobs:
         with:
           path: artifacts/
 
-      - name: List artifacts
+      - name: List downloaded files
         run: find artifacts/ -type f -ls
 
-      - name: Upload to Release
+      - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
