@@ -21,7 +21,7 @@ That's it. No installer. No admin rights needed.
 
 ```bash
 # Download
-wget https://github.com/YOUR_USERNAME/nexplorer/releases/latest/download/NexPlorer-linux-x86_64
+wget https://github.com/ujas-dev/nexplorer/releases/latest/download/NexPlorer-linux-x86_64
 
 # Make executable
 chmod +x NexPlorer-linux-x86_64
@@ -42,7 +42,7 @@ nexplorer   # run from anywhere
 
 ```bash
 # Download
-curl -L -o NexPlorer https://github.com/YOUR_USERNAME/nexplorer/releases/latest/download/NexPlorer-macos-x86_64
+curl -L -o NexPlorer https://github.com/ujas-dev/nexplorer/releases/latest/download/NexPlorer-macos-x86_64
 
 # Make executable
 chmod +x NexPlorer

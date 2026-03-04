@@ -156,7 +156,6 @@ jobs:
 
       - name: Compile with Nuitka
         run: python -m nuitka --output-filename=NexPlorer nexplorer/__main__.py
-
       - name: Rename output
         run: |
           ls -la dist/

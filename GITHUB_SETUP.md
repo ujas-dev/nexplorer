@@ -26,8 +26,8 @@ git branch -M main
 git add .
 git commit -m "feat: initial release NexPlorer v1.0.0"
 
-# Connect to GitHub (replace YOUR_USERNAME)
-git remote add origin https://github.com/YOUR_USERNAME/nexplorer.git
+# Connect to GitHub
+git remote add origin https://github.com/ujas-dev/nexplorer.git
 
 # Push
 git push -u origin main
