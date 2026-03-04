@@ -124,7 +124,8 @@ jobs:
           output-dir: build
 
           # Enable Tkinter plugin (required for CustomTkinter)
-          enable-plugins: tk-inter
+          # Enable UPX compression (30-50% smaller binary)
+          enable-plugins: tk-inter, upx
 
           # Include all nexplorer subpackages
           include-package: |
@@ -193,7 +194,7 @@ jobs:
           windows-file-description: "NexPlorer - Intelligent File Explorer"
 
           # Enable UPX compression (30-50% smaller binary)
-          enable-plugins: upx
+          # enable-plugins: upx
 
           # Strip debug symbols
           assume-yes-for-downloads: true
